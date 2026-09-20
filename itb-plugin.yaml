@@ -1,0 +1,57 @@
+apiVersion: itb-plugins/v1
+name: archimate
+version: 0.1.0
+description: >
+  ArchiMate model queries and alignment with the European Interoperability
+  Reference Architecture (EIRA), as a GITB validator.
+homepage: https://github.com/OpenTestBed/itb-plugin-archimate
+license: BSD-3-Clause
+maintainers: [jose.a.teixeira@gmail.com]
+
+# SPEC FIRST — the dialect exists, the service does not yet.
+#
+# This dialect was written as the acceptance test for the generation-2 language
+# contract: it adds actor kinds, a value type with its own path language, and a
+# conformance handler, and it needed no change to the core language to do so.
+# Its HTTP contract is stated below and in dialect/component.yml; build a
+# service to it and the dialect runs unchanged.
+#
+# Until that image exists, `runtime` names what it will be rather than what is
+# published. Nothing deploys this plugin today, and a feature using the dialect
+# compiles but cannot run.
+runtime:
+  # NOT PUBLISHED YET. The compose file arrives with the image.
+  services:
+    archimate-validator:
+      image: opentestbed/archimate-validator:local
+      port: 8080
+      healthcheck: /healthz
+
+endpoints:
+  archimateQuery: http://archimate-validator:8080/archimate/api
+  eiraValidator:  http://archimate-validator:8080/eira/api
+
+# The contract a service must meet (the GITB validator contract every other
+# validator here speaks, plus two endpoints for models and queries):
+#
+#   GET  /archimate/api/models/<name>             the model (Open Exchange Format XML or JSON)
+#   POST /archimate/api/query {content, query}    an ArchiMate model query -> {output:[{value}]}
+#   POST /eira/api/validate   GITB TAR            EIRA alignment -> /report/context/0/value = error count
+provides:
+  - { capability: archimate-query,      uri: https://opentestbed.github.io/itb-plugins/capabilities/archimate-query,      version: 1.0.0, service: archimate-validator, entrypoint: /archimate/api }
+  - { capability: eira-conformance,     uri: https://opentestbed.github.io/itb-plugins/capabilities/eira-conformance,     version: 1.0.0, service: archimate-validator, entrypoint: /eira/api }
+
+requires: []
+
+# Language extension (dialect): parser-format files live in dialect/
+# (component.yml + steps.yml) — THE canonical copy. The copies under
+# public/components/ in the workbench and the ITB manager are written by
+# itb-cli/src/sync-dialects.mjs; edit them there and the next sync overwrites you.
+#
+# Generation 2 only: this dialect is what generation 2 was designed against, so
+# there is no steps-v1.yml.
+dialect:
+  path: dialect/
+  namespace: archimate
+
+config: {}
